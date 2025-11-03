@@ -1,160 +1,89 @@
 import Adw from "gi://Adw";
 import Gtk from "gi://Gtk";
 import Gdk from "gi://Gdk";
-import Gio from "gi://Gio";
 import GLib from "gi://GLib";
 import { ExtensionPreferences } from "resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js";
 
 export default class MuteHotkeyPreferences extends ExtensionPreferences {
     fillPreferencesWindow(window) {
-        const settings = this.getSettings();
-
-        // Create a preferences page
         const page = new Adw.PreferencesPage();
         window.add(page);
 
-        // Create a preferences group
-        const group = new Adw.PreferencesGroup({
-            title: "Keyboard Shortcut",
-            description: "Configure the hotkey to mute/unmute the focused window",
+        const infoGroup = new Adw.PreferencesGroup({
+            title: "Setup Instructions",
+            description: "This extension needs to be triggered via GNOME Settings",
         });
-        page.add(group);
+        page.add(infoGroup);
 
-        // Create the shortcut row
-        const row = new Adw.ActionRow({
-            title: "Toggle Mute Shortcut",
-            subtitle: "Examples: <Super>m, <Control><Alt>m, <Shift><Super>F1",
+        const step1Row = new Adw.ActionRow({
+            title: "1. Open GNOME Settings → Keyboard → View and Customize Shortcuts",
         });
-        group.add(row);
+        infoGroup.add(step1Row);
 
-        // Create shortcut label that shows current binding
-        const shortcutLabel = new Gtk.ShortcutLabel({
-            disabled_text: "Disabled",
+        const openSettingsButton = new Gtk.Button({
+            label: "Open Settings",
             valign: Gtk.Align.CENTER,
         });
+        openSettingsButton.connect("clicked", () => {
+            try {
+                GLib.spawn_command_line_async("gnome-control-center keyboard");
+            } catch (e) {
+                log("Failed to open settings: " + e);
+            }
+        });
+        step1Row.add_suffix(openSettingsButton);
 
-        // Update the label with current shortcut
-        const updateShortcut = () => {
-            const shortcuts = settings.get_strv("toggle-mute");
-            shortcutLabel.set_accelerator(shortcuts[0] || null);
-        };
-        updateShortcut();
+        const step2Row = new Adw.ActionRow({
+            title: '2. Scroll to bottom and click "Custom Shortcuts"',
+        });
+        infoGroup.add(step2Row);
 
-        // Create button to open edit dialog
-        const button = new Gtk.Button({
+        const commandGroup = new Adw.PreferencesGroup({
+            title: "3. Enter these details",
+        });
+        page.add(commandGroup);
+
+        const nameRow = new Adw.ActionRow({
+            title: "Name",
+            subtitle: "Toggle Mute Focused Window",
+        });
+        commandGroup.add(nameRow);
+
+        const copyNameButton = new Gtk.Button({
+            icon_name: "edit-copy-symbolic",
             valign: Gtk.Align.CENTER,
-            has_frame: true,
-            icon_name: "document-edit-symbolic",
+            tooltip_text: "Copy to clipboard",
         });
-
-        button.connect("clicked", () => {
-            const currentShortcut = settings.get_strv("toggle-mute")[0] || "";
-
-            const entry = new Gtk.Entry({
-                text: currentShortcut,
-                placeholder_text: "<Super>m",
-                hexpand: true,
-            });
-
-            const box = new Gtk.Box({
-                orientation: Gtk.Orientation.VERTICAL,
-                spacing: 12,
-                margin_top: 24,
-                margin_bottom: 24,
-                margin_start: 24,
-                margin_end: 24,
-            });
-
-            const label = new Gtk.Label({
-                label: "Enter shortcut combination",
-                wrap: true,
-                xalign: 0,
-            });
-            box.append(label);
-
-            const exampleLabel = new Gtk.Label({
-                label: "Examples:\n<Super>m\n<Control><Alt>m\n<Shift><Super>F1",
-                wrap: true,
-                xalign: 0,
-                css_classes: ["dim-label"],
-            });
-            box.append(exampleLabel);
-
-            box.append(entry);
-
-            const buttonBox = new Gtk.Box({
-                orientation: Gtk.Orientation.HORIZONTAL,
-                spacing: 6,
-                halign: Gtk.Align.END,
-                margin_top: 12,
-            });
-            box.append(buttonBox);
-
-            const editor = new Gtk.Window({
-                modal: true,
-                transient_for: window,
-                title: "Edit Shortcut",
-                default_width: 400,
-                default_height: 250,
-                resizable: false,
-                child: box,
-            });
-
-            const cancelButton = new Gtk.Button({
-                label: "Cancel",
-            });
-            cancelButton.connect("clicked", () => editor.close());
-            buttonBox.append(cancelButton);
-
-            const clearButton = new Gtk.Button({
-                label: "Clear",
-            });
-            clearButton.connect("clicked", () => {
-                settings.set_strv("toggle-mute", []);
-                editor.close();
-            });
-            buttonBox.append(clearButton);
-
-            const saveButton = new Gtk.Button({
-                label: "Save",
-                css_classes: ["suggested-action"],
-            });
-            saveButton.connect("clicked", () => {
-                const shortcut = entry.get_text().trim();
-                if (shortcut) {
-                    // Validate the shortcut
-                    const [valid, keyval, mods] = Gtk.accelerator_parse(shortcut);
-                    if (valid && keyval !== 0) {
-                        settings.set_strv("toggle-mute", [shortcut]);
-                        editor.close();
-                    } else {
-                        entry.add_css_class("error");
-                    }
-                } else {
-                    settings.set_strv("toggle-mute", []);
-                    editor.close();
-                }
-            });
-            buttonBox.append(saveButton);
-
-            // Remove error class when typing
-            entry.connect("changed", () => {
-                entry.remove_css_class("error");
-            });
-
-            // Save on Enter key
-            entry.connect("activate", () => {
-                saveButton.emit("clicked");
-            });
-
-            editor.present();
+        copyNameButton.connect("clicked", () => {
+            const clipboard = Gdk.Display.get_default().get_clipboard();
+            clipboard.set("Toggle Mute Focused Window");
         });
+        nameRow.add_suffix(copyNameButton);
 
-        // Add both label and button to row
-        row.add_suffix(shortcutLabel);
-        row.add_suffix(button);
+        const commandRow = new Adw.ActionRow({
+            title: "Command",
+            subtitle:
+                "gdbus call --session --dest org.gnome.Shell --object-path /org/gnome/Shell/Extensions/MuteHotkey --method org.gnome.Shell.Extensions.MuteHotkey.ToggleMute",
+        });
+        commandGroup.add(commandRow);
 
-        // Update when setting changes
-        settings.connect("changed::toggle-mute", updateShortcut);
+        const copyCommandButton = new Gtk.Button({
+            icon_name: "edit-copy-symbolic",
+            valign: Gtk.Align.CENTER,
+            tooltip_text: "Copy to clipboard",
+        });
+        copyCommandButton.connect("clicked", () => {
+            const clipboard = Gdk.Display.get_default().get_clipboard();
+            clipboard.set(
+                "gdbus call --session --dest org.gnome.Shell --object-path /org/gnome/Shell/Extensions/MuteHotkey --method org.gnome.Shell.Extensions.MuteHotkey.ToggleMute",
+            );
+        });
+        commandRow.add_suffix(copyCommandButton);
+
+        const step4Row = new Adw.ActionRow({
+            title: "Shortcut",
+            subtitle: "Set your preferred keyboard shortcut",
+        });
+        commandGroup.add(step4Row);
     }
 }
