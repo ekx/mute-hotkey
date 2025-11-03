@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<schemalist>
+  <schema id="org.gnome.shell.extensions.mute-hotkey" path="/org/gnome/shell/extensions/mute-hotkey/">
+    <key name="toggle-mute" type="as">
+      <default>['&lt;Super&gt;m']</default>
+      <summary>Toggle mute for focused window</summary>
+      <description>
+        Keyboard shortcut to mute/unmute the currently focused window
+      </description>
+    </key>
+  </schema>
+</schemalist>

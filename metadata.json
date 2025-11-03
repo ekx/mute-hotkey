@@ -1,0 +1,8 @@
+{
+  "uuid": "mute-hotkey@ha.bede.re",
+  "name": "Mute Hotkey",
+  "description": "Toggles mute for the currently focused application",
+  "version": 1,
+  "shell-version": ["49"],
+  "settings-schema": "org.gnome.shell.extensions.mute-hotkey"
+}
