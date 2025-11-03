@@ -1,7 +1,7 @@
 {
     "uuid": "mute-hotkey@ha.bede.re",
     "name": "Mute Hotkey",
-    "description": "Toggles mute for the currently focused application",
+    "description": "Mutes/unmutes the currently focused application by hotkey",
     "version": 1,
     "shell-version": ["49"]
 }
