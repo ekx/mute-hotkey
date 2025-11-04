@@ -1,5 +1,4 @@
 // extension.js
-import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import Shell from "gi://Shell";
 import Gio from "gi://Gio";
 import GLib from "gi://GLib";
@@ -33,6 +32,7 @@ export default class MuteHotkeyExtension {
             return;
         }
 
+        const pid = focusedWindow.get_pid();
         const appName = app.get_name().toLowerCase();
         const appId = app.get_id().replace(".desktop", "").toLowerCase();
 
@@ -54,6 +54,7 @@ export default class MuteHotkeyExtension {
                         inputLower.includes(`application.name = "${appName}"`) ||
                         inputLower.includes(`application.process.binary = "${appId}"`) ||
                         inputLower.includes(`application.process.binary = "${appName}"`) ||
+                        inputLower.includes(`application.process.id = "${pid}"`) ||
                         inputLower.includes(appName) ||
                         inputLower.includes(appId)
                     ) {
