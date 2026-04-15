@@ -11,76 +11,83 @@ const DBUS_INTERFACE = `
 </node>`;
 
 export default class MuteHotkeyExtension {
-    enable() {
-        this._dbus = Gio.DBusExportedObject.wrapJSObject(DBUS_INTERFACE, this);
-        this._dbus.export(Gio.DBus.session, "/org/gnome/Shell/Extensions/MuteHotkey");
+  enable() {
+    this._dbus = Gio.DBusExportedObject.wrapJSObject(DBUS_INTERFACE, this);
+    this._dbus.export(
+      Gio.DBus.session,
+      "/org/gnome/Shell/Extensions/MuteHotkey",
+    );
+  }
+
+  disable() {
+    if (this._dbus) {
+      this._dbus.unexport();
+      this._dbus = null;
+    }
+  }
+
+  ToggleMute() {
+    const focusedWindow = global.display.focus_window;
+    const windowTracker = Shell.WindowTracker.get_default();
+    const app = windowTracker.get_window_app(focusedWindow);
+
+    if (!app) {
+      return;
     }
 
-    disable() {
-        if (this._dbus) {
-            this._dbus.unexport();
-            this._dbus = null;
-        }
-    }
+    const windowTitle = focusedWindow.get_title();
+    const pid = focusedWindow.get_pid();
+    const appName = app.get_name().toLowerCase();
+    const appId = app.get_id().replace(".desktop", "").toLowerCase();
 
-    ToggleMute() {
-        const focusedWindow = global.display.focus_window;
-        const windowTracker = Shell.WindowTracker.get_default();
-        const app = windowTracker.get_window_app(focusedWindow);
+    try {
+      let [success, stdout] = GLib.spawn_command_line_sync(
+        "pactl list sink-inputs",
+      );
 
-        if (!app) {
-            return;
-        }
+      if (success) {
+        const output = new TextDecoder().decode(stdout);
+        const sinkInputs = output.split("Sink Input #");
 
-        const pid = focusedWindow.get_pid();
-        const appName = app.get_name().toLowerCase();
-        const appId = app.get_id().replace(".desktop", "").toLowerCase();
+        let matchingSinks = [];
+        let anyMuted = false;
 
-        try {
-            let [success, stdout] = GLib.spawn_command_line_sync("pactl list sink-inputs");
+        for (let i = 1; i < sinkInputs.length; i++) {
+          const input = sinkInputs[i];
+          const inputLower = input.toLowerCase();
 
-            if (success) {
-                const output = new TextDecoder().decode(stdout);
-                const sinkInputs = output.split("Sink Input #");
+          if (
+            inputLower.includes(`application.name = "${appName}"`) ||
+            inputLower.includes(`application.name = "${windowTitle}"`) ||
+            inputLower.includes(`application.process.binary = "${appId}"`) ||
+            inputLower.includes(`application.process.binary = "${appName}"`) ||
+            inputLower.includes(`application.process.id = "${pid}"`) ||
+            inputLower.includes(appName) ||
+            inputLower.includes(appId)
+          ) {
+            const firstLine = input.split("\n")[0];
+            const sinkInputId = firstLine.trim();
 
-                let matchingSinks = [];
-                let anyMuted = false;
-
-                for (let i = 1; i < sinkInputs.length; i++) {
-                    const input = sinkInputs[i];
-                    const inputLower = input.toLowerCase();
-
-                    if (
-                        inputLower.includes(`application.name = "${appName}"`) ||
-                        inputLower.includes(`application.process.binary = "${appId}"`) ||
-                        inputLower.includes(`application.process.binary = "${appName}"`) ||
-                        inputLower.includes(`application.process.id = "${pid}"`) ||
-                        inputLower.includes(appName) ||
-                        inputLower.includes(appId)
-                    ) {
-                        const firstLine = input.split("\n")[0];
-                        const sinkInputId = firstLine.trim();
-
-                        if (input.includes("Mute: yes")) {
-                            anyMuted = true;
-                        }
-
-                        matchingSinks.push(sinkInputId);
-                    }
-                }
-
-                if (matchingSinks.length > 0) {
-                    const newMuteState = anyMuted ? "0" : "1";
-
-                    for (let sinkInputId of matchingSinks) {
-                        GLib.spawn_command_line_async(
-                            `pactl set-sink-input-mute ${sinkInputId} ${newMuteState}`,
-                        );
-                    }
-                }
+            if (input.includes("Mute: yes")) {
+              anyMuted = true;
             }
-        } catch (e) {
-            logError(e, "Failed to toggle mute");
+
+            matchingSinks.push(sinkInputId);
+          }
         }
+
+        if (matchingSinks.length > 0) {
+          const newMuteState = anyMuted ? "0" : "1";
+
+          for (let sinkInputId of matchingSinks) {
+            GLib.spawn_command_line_async(
+              `pactl set-sink-input-mute ${sinkInputId} ${newMuteState}`,
+            );
+          }
+        }
+      }
+    } catch (e) {
+      logError(e, "Failed to toggle mute");
     }
+  }
 }
