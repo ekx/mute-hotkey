@@ -35,7 +35,7 @@ export default class MuteHotkeyExtension {
       return;
     }
 
-    const windowTitle = focusedWindow.get_title();
+    const windowTitle = focusedWindow.get_title().toLowerCase();
     const pid = focusedWindow.get_pid();
     const appName = app.get_name().toLowerCase();
     const appId = app.get_id().replace(".desktop", "").toLowerCase();
