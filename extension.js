@@ -39,6 +39,8 @@ export default class MuteHotkeyExtension {
     const pid = focusedWindow.get_pid();
     const appName = app.get_name().toLowerCase();
     const appId = app.get_id().replace(".desktop", "").toLowerCase();
+    const binaryName = appName;
+    if (appName == "gamescope-wl") binaryName = "wine64-preloader";
 
     try {
       let [success, stdout] = GLib.spawn_command_line_sync(
@@ -61,6 +63,7 @@ export default class MuteHotkeyExtension {
             inputLower.includes(`application.name = "${windowTitle}"`) ||
             inputLower.includes(`application.process.binary = "${appId}"`) ||
             inputLower.includes(`application.process.binary = "${appName}"`) ||
+            inputLower.includes(`application.process.binary = "${binaryName}"`) ||
             inputLower.includes(`application.process.id = "${pid}"`) ||
             inputLower.includes(appName) ||
             inputLower.includes(appId)
