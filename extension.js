@@ -44,7 +44,7 @@ export default class MuteHotkeyExtension {
     const binaryName2 = appName;
     if (appName == "gamescope-wl") {
       binaryName = "wine64-preloader";
-      binaryName = "wine-preloader";
+      binaryName2 = "wine-preloader";
     }
 
     try {
