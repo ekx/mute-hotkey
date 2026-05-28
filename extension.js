@@ -32,6 +32,7 @@ export default class MuteHotkeyExtension {
     const app = windowTracker.get_window_app(focusedWindow);
 
     if (!app) {
+      console.warn("mute hotkey - no app found :(");
       return;
     }
 
@@ -40,12 +41,19 @@ export default class MuteHotkeyExtension {
     const appName = app.get_name().toLowerCase();
     const appId = app.get_id().replace(".desktop", "").toLowerCase();
 
-    const binaryName = appName;
-    const binaryName2 = appName;
-    if (appName == "gamescope-wl") {
+    let binaryName = appName;
+    let binaryName2 = appName;
+    if (appName == "gamescope" || appName == "gamescope-wl") {
       binaryName = "wine64-preloader";
       binaryName2 = "wine-preloader";
     }
+
+    // console.warn(`focused window title ${windowTitle}`);
+    // console.warn(`focused window pid ${pid}`);
+    // console.warn(`focused window appName ${appName}`);
+    // console.warn(`focused window appId ${appId}`);
+    // console.warn(`focused window binaryName ${binaryName}`);
+    // console.warn(`focused window binaryName2 ${binaryName2}`);
 
     try {
       let [success, stdout] = GLib.spawn_command_line_sync(
@@ -89,6 +97,8 @@ export default class MuteHotkeyExtension {
           const newMuteState = anyMuted ? "0" : "1";
 
           for (let sinkInputId of matchingSinks) {
+            // onsole.warn(`pactl set-sink-input-mute ${sinkInputId} ${newMuteState}`);
+
             GLib.spawn_command_line_async(
               `pactl set-sink-input-mute ${sinkInputId} ${newMuteState}`,
             );
